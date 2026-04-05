@@ -28,6 +28,23 @@ import { useActor } from "../hooks/useActor";
 import { useAuth } from "../hooks/useAuth";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 
+// All available cargo roles (extends beyond the backend Cargo enum)
+const CARGO_OPTIONS: { value: string; label: string }[] = [
+  { value: "membro", label: "Membro" },
+  { value: "obreiro", label: "Obreiro/a" },
+  { value: "diacono", label: "Diácono" },
+  { value: "diaconisa", label: "Diaconisa" },
+  { value: "evangelista", label: "Evangelista" },
+  { value: "presbitero", label: "Presbítero" },
+  { value: "pastor", label: "Pastor" },
+  { value: "admin", label: "Administrador" },
+];
+
+function cargoLabel(cargo: string): string {
+  const found = CARGO_OPTIONS.find((o) => o.value === cargo);
+  return found ? found.label : cargo;
+}
+
 function MemberForm({
   member,
   onSave,
@@ -44,7 +61,7 @@ function MemberForm({
   const [form, setForm] = useState({
     name: member?.name || "",
     phone: member?.phone || "",
-    cargo: member?.cargo || Cargo.membro,
+    cargo: (member?.cargo as string) || Cargo.membro,
     lgpd: member?.lgpd ?? true,
     birthDate: member?.birthDate
       ? new Date(Number(member.birthDate)).toISOString().split("T")[0]
@@ -95,6 +112,7 @@ function MemberForm({
       <div className="grid gap-2">
         <Label>Nome</Label>
         <Input
+          data-ocid="membros.input"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           placeholder="Nome completo"
@@ -112,15 +130,17 @@ function MemberForm({
         <Label>Cargo</Label>
         <Select
           value={form.cargo}
-          onValueChange={(v) => setForm({ ...form, cargo: v as Cargo })}
+          onValueChange={(v) => setForm({ ...form, cargo: v })}
         >
-          <SelectTrigger>
-            <SelectValue />
+          <SelectTrigger data-ocid="membros.select">
+            <SelectValue placeholder="Selecione o cargo" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={Cargo.membro}>Membro</SelectItem>
-            <SelectItem value={Cargo.congregado}>Congregado</SelectItem>
-            <SelectItem value={Cargo.admin}>Administrador</SelectItem>
+            {CARGO_OPTIONS.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -153,14 +173,23 @@ function MemberForm({
           checked={form.lgpd}
           onCheckedChange={(v) => setForm({ ...form, lgpd: v })}
           id="lgpd"
+          data-ocid="membros.switch"
         />
         <Label htmlFor="lgpd">Autorizo exibição de dados (LGPD)</Label>
       </div>
       <div className="flex gap-2 justify-end pt-2">
-        <Button variant="outline" onClick={onClose}>
+        <Button
+          variant="outline"
+          onClick={onClose}
+          data-ocid="membros.cancel_button"
+        >
           Cancelar
         </Button>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          data-ocid="membros.submit_button"
+        >
           {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
           Salvar
         </Button>
@@ -233,11 +262,12 @@ export function Membros() {
               onClick={() =>
                 setEditTarget(isAdmin ? undefined : ownMember || undefined)
               }
+              data-ocid="membros.open_modal_button"
             >
               {isAdmin ? "Adicionar Membro" : "Editar Perfil"}
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md" data-ocid="membros.dialog">
             <DialogHeader>
               <DialogTitle>
                 {editTarget ? "Editar Membro" : "Novo Membro"}
@@ -259,10 +289,15 @@ export function Membros() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="mb-4 max-w-xs"
+            data-ocid="membros.search_input"
           />
-          <div className="grid gap-3">
-            {filtered.map((m) => (
-              <Card key={m.id.toText()} className="flex items-center">
+          <div className="grid gap-3" data-ocid="membros.list">
+            {filtered.map((m, idx) => (
+              <Card
+                key={m.id.toText()}
+                className="flex items-center"
+                data-ocid={`membros.item.${idx + 1}`}
+              >
                 <CardContent className="flex items-center gap-4 py-3 w-full">
                   {m.photo ? (
                     <img
@@ -278,7 +313,7 @@ export function Membros() {
                   <div className="flex-1">
                     <div className="font-semibold">{m.name}</div>
                     <div className="text-sm text-muted-foreground">
-                      {m.cargo}
+                      {cargoLabel(m.cargo as string)}
                       {m.lgpd && m.birthDate
                         ? ` · ${calcAge(m.birthDate)} anos`
                         : ""}
@@ -300,6 +335,7 @@ export function Membros() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      data-ocid={`membros.edit_button.${idx + 1}`}
                       onClick={() => {
                         setEditTarget(m);
                         setEditOpen(true);
@@ -312,7 +348,10 @@ export function Membros() {
               </Card>
             ))}
             {filtered.length === 0 && (
-              <p className="text-muted-foreground text-center py-8">
+              <p
+                className="text-muted-foreground text-center py-8"
+                data-ocid="membros.empty_state"
+              >
                 Nenhum membro encontrado.
               </p>
             )}
@@ -337,7 +376,7 @@ export function Membros() {
             </div>
             <div>
               <span className="text-muted-foreground text-sm">Cargo: </span>
-              {ownMember.cargo}
+              {cargoLabel(ownMember.cargo as string)}
             </div>
             <div>
               <span className="text-muted-foreground text-sm">Telefone: </span>
@@ -369,6 +408,7 @@ export function Membros() {
             Nenhum perfil cadastrado ainda.
           </p>
           <Button
+            data-ocid="membros.primary_button"
             onClick={() => {
               setEditTarget(undefined);
               setEditOpen(true);

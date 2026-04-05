@@ -11,6 +11,7 @@ import {
   ShoppingBag,
   Sun,
   Target,
+  UserCircle,
   Users,
   X,
 } from "lucide-react";
@@ -28,6 +29,16 @@ const navItems = [
   { path: "/projetos", label: "Projetos", icon: Target },
   { path: "/escalas", label: "Escalas", icon: ClipboardList },
   { path: "/oracao", label: "Oração", icon: Heart },
+  { path: "/perfil", label: "Meu Perfil", icon: UserCircle },
+];
+
+// Bottom nav shows: 4 most-used modules + Perfil
+const bottomNavItems = [
+  { path: "/membros", label: "Membros", icon: Users },
+  { path: "/financeiro", label: "Dízimos", icon: DollarSign },
+  { path: "/cantina", label: "Cantina", icon: ShoppingBag },
+  { path: "/escalas", label: "Escalas", icon: ClipboardList },
+  { path: "/perfil", label: "Perfil", icon: UserCircle },
 ];
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -158,10 +169,11 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Bottom nav (mobile) */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 backdrop-blur z-50">
         <div className="flex items-center justify-around py-2">
-          {navItems.slice(0, 5).map(({ path, icon: Icon }) => (
+          {bottomNavItems.map(({ path, icon: Icon }) => (
             <Link
               key={path}
               to={path}
+              data-ocid="nav.link"
               className={`flex flex-col items-center p-2 transition-colors ${
                 location.pathname === path
                   ? "text-foreground"

@@ -1,3 +1,14 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -10,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Plus } from "lucide-react";
+import { Copy, Loader2, Plus, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ExternalBlob } from "../backend";
@@ -26,8 +37,9 @@ export function Projetos() {
   const [addOpen, setAddOpen] = useState(false);
   const [contributeOpen, setContributeOpen] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [form, setForm] = useState({ name: "", targetAmount: "" });
+  const [form, setForm] = useState({ name: "", targetAmount: "", pixKey: "" });
   const [contribution, setContribution] = useState("");
 
   const load = useCallback(async () => {
@@ -46,7 +58,7 @@ export function Projetos() {
   }, [load]);
 
   const handleAdd = async () => {
-    if (!actor || !form.name || !form.targetAmount) return;
+    if (!actor || !form.name || !form.targetAmount || !form.pixKey) return;
     setSaving(true);
     try {
       let progressPhoto: ExternalBlob | undefined;
@@ -58,10 +70,11 @@ export function Projetos() {
         name: form.name,
         targetAmount: Number.parseFloat(form.targetAmount),
         currentAmount: 0,
+        pixKey: form.pixKey,
         progressPhoto,
       });
       toast.success("Projeto criado!");
-      setForm({ name: "", targetAmount: "" });
+      setForm({ name: "", targetAmount: "", pixKey: "" });
       setPhotoFile(null);
       setAddOpen(false);
       load();
@@ -91,6 +104,26 @@ export function Projetos() {
     }
   };
 
+  const handleDelete = async (projectName: string) => {
+    if (!actor) return;
+    setDeleting(projectName);
+    try {
+      await actor.deleteProject(projectName);
+      toast.success("Projeto excluído com sucesso!");
+      load();
+    } catch {
+      toast.error("Erro ao excluir projeto.");
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const copyPixKey = (pixKey: string) => {
+    navigator.clipboard.writeText(pixKey).then(() => {
+      toast.success("Chave Pix copiada!");
+    });
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center h-48">
@@ -105,12 +138,12 @@ export function Projetos() {
         {isAdmin && (
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button data-ocid="projetos.open_modal_button">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Projeto
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md" data-ocid="projetos.dialog">
               <DialogHeader>
                 <DialogTitle>Novo Projeto</DialogTitle>
               </DialogHeader>
@@ -118,8 +151,10 @@ export function Projetos() {
                 <div className="grid gap-2">
                   <Label>Nome do Projeto</Label>
                   <Input
+                    data-ocid="projetos.input"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    placeholder="Nome do projeto"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -130,6 +165,18 @@ export function Projetos() {
                     onChange={(e) =>
                       setForm({ ...form, targetAmount: e.target.value })
                     }
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Chave Pix</Label>
+                  <Input
+                    data-ocid="projetos.pix_input"
+                    value={form.pixKey}
+                    onChange={(e) =>
+                      setForm({ ...form, pixKey: e.target.value })
+                    }
+                    placeholder="CPF, e-mail, telefone ou chave aleatória"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -141,10 +188,18 @@ export function Projetos() {
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setAddOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setAddOpen(false)}
+                    data-ocid="projetos.cancel_button"
+                  >
                     Cancelar
                   </Button>
-                  <Button onClick={handleAdd} disabled={saving}>
+                  <Button
+                    onClick={handleAdd}
+                    disabled={saving}
+                    data-ocid="projetos.submit_button"
+                  >
                     {saving ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
@@ -157,14 +212,14 @@ export function Projetos() {
         )}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {projects.map((p) => {
+      <div className="grid gap-4 sm:grid-cols-2" data-ocid="projetos.list">
+        {projects.map((p, idx) => {
           const pct = Math.min(
             100,
             Math.round((p.currentAmount / p.targetAmount) * 100),
           );
           return (
-            <Card key={p.name}>
+            <Card key={p.name} data-ocid={`projetos.item.${idx + 1}`}>
               {p.progressPhoto && (
                 <img
                   src={p.progressPhoto.getDirectURL()}
@@ -173,7 +228,50 @@ export function Projetos() {
                 />
               )}
               <CardHeader className="pb-2">
-                <CardTitle className="text-lg">{p.name}</CardTitle>
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-lg">{p.name}</CardTitle>
+                  {isAdmin && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive flex-shrink-0"
+                          data-ocid={`projetos.delete_button.${idx + 1}`}
+                          disabled={deleting === p.name}
+                        >
+                          {deleting === p.name ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent data-ocid="projetos.dialog">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Excluir Projeto</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Tem certeza que deseja excluir o projeto{" "}
+                            <strong>{p.name}</strong>? Esta ação não pode ser
+                            desfeita.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel data-ocid="projetos.cancel_button">
+                            Cancelar
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(p.name)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            data-ocid="projetos.confirm_button"
+                          >
+                            Excluir
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="flex flex-col gap-3">
                 <div className="flex justify-between text-sm text-muted-foreground">
@@ -182,16 +280,43 @@ export function Projetos() {
                 </div>
                 <Progress value={pct} className="h-2" />
                 <div className="text-right text-sm font-semibold">{pct}%</div>
+
+                {/* Pix Key */}
+                <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-md border border-border bg-muted/40">
+                  <div className="min-w-0">
+                    <p className="text-xs text-muted-foreground mb-0.5">
+                      Chave Pix
+                    </p>
+                    <p className="text-sm font-mono truncate">{p.pixKey}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex-shrink-0 h-7 w-7"
+                    onClick={() => copyPixKey(p.pixKey)}
+                    title="Copiar chave Pix"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+
                 <Dialog
                   open={contributeOpen === p.name}
                   onOpenChange={(o) => setContributeOpen(o ? p.name : null)}
                 >
                   <DialogTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      data-ocid={`projetos.secondary_button.${idx + 1}`}
+                    >
                       Contribuir
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-xs">
+                  <DialogContent
+                    className="sm:max-w-xs"
+                    data-ocid="projetos.dialog"
+                  >
                     <DialogHeader>
                       <DialogTitle>Contribuir para {p.name}</DialogTitle>
                     </DialogHeader>
@@ -202,18 +327,21 @@ export function Projetos() {
                           type="number"
                           value={contribution}
                           onChange={(e) => setContribution(e.target.value)}
+                          data-ocid="projetos.input"
                         />
                       </div>
                       <div className="flex gap-2 justify-end">
                         <Button
                           variant="outline"
                           onClick={() => setContributeOpen(null)}
+                          data-ocid="projetos.cancel_button"
                         >
                           Cancelar
                         </Button>
                         <Button
                           onClick={() => handleContribute(p.name)}
                           disabled={saving}
+                          data-ocid="projetos.confirm_button"
                         >
                           {saving ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -229,7 +357,10 @@ export function Projetos() {
           );
         })}
         {projects.length === 0 && (
-          <p className="text-muted-foreground text-center py-8 col-span-2">
+          <p
+            className="text-muted-foreground text-center py-8 col-span-2"
+            data-ocid="projetos.empty_state"
+          >
             Nenhum projeto cadastrado.
           </p>
         )}

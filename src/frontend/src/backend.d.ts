@@ -20,6 +20,7 @@ export interface Tithe {
     receiptImage?: ExternalBlob;
     date: bigint;
     amount: number;
+    titheType: TitheType;
 }
 export interface Event {
     title: string;
@@ -67,6 +68,7 @@ export interface Member {
 export interface Project {
     name: string;
     progressPhoto?: ExternalBlob;
+    pixKey: string;
     targetAmount: number;
     currentAmount: number;
 }
@@ -96,6 +98,10 @@ export enum TitheStatus {
     pending = "pending",
     confirmed = "confirmed"
 }
+export enum TitheType {
+    tithe = "tithe",
+    offering = "offering"
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
@@ -112,6 +118,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     confirmTithe(recordId: string): Promise<void>;
     contributionProject(projectName: string, contribution: number): Promise<number>;
+    deleteProject(projectName: string): Promise<void>;
     deleteTithe(titheId: string): Promise<void>;
     editScale(jornada: Escala): Promise<void>;
     getAllEvents(): Promise<Array<Event>>;
@@ -136,11 +143,11 @@ export interface backendInterface {
     isAdminAssigned(): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
     isCallerApproved(): Promise<boolean>;
-    selfInitializeAsFirstAdmin(): Promise<boolean>;
     listApprovals(): Promise<Array<UserApprovalInfo>>;
     markRecordPaid(recordId: string): Promise<void>;
     removeEvent(title: string): Promise<void>;
     requestApproval(): Promise<void>;
+    selfInitializeAsFirstAdmin(): Promise<boolean>;
     setApproval(user: Principal, status: ApprovalStatus): Promise<void>;
     updateTithe(titheId: string, amount: number): Promise<void>;
     upsertMember(member: Member): Promise<void>;

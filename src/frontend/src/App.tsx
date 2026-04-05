@@ -14,6 +14,7 @@ import { Financeiro } from "./pages/Financeiro";
 import { Home } from "./pages/Home";
 import { Login } from "./pages/Login";
 import { Membros } from "./pages/Membros";
+import { MeuPerfil } from "./pages/MeuPerfil";
 import { Oracao } from "./pages/Oracao";
 import { Projetos } from "./pages/Projetos";
 
@@ -125,6 +126,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <Admin />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/perfil"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <MeuPerfil />
             </Layout>
           </ProtectedRoute>
         }

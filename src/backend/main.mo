@@ -6,12 +6,15 @@ import List "mo:core/List";
 import Map "mo:core/Map";
 import Order "mo:core/Order";
 import Array "mo:core/Array";
+
 import Runtime "mo:core/Runtime";
 import Time "mo:core/Time";
 import MixinStorage "blob-storage/Mixin";
 import Storage "blob-storage/Storage";
 import Text "mo:core/Text";
 import Principal "mo:core/Principal";
+
+// Enable data migration
 
 actor {
   // Include authentication system
@@ -45,8 +48,6 @@ actor {
     UserApproval.setApproval(approvalState, caller, #approved);
     true;
   };
-
-
 
   public shared ({ caller }) func setApproval(user : Principal, status : UserApproval.ApprovalStatus) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
@@ -117,8 +118,14 @@ actor {
     #confirmed;
   };
 
+  public type TitheType = {
+    #tithe;    // dízimo
+    #offering; // oferta
+  };
+
   public type Tithe = {
     memberId : Principal;
+    titheType : TitheType;
     amount : Float;
     date : Int;
     receiptImage : ?Storage.ExternalBlob;
@@ -153,6 +160,7 @@ actor {
     name : Text;
     targetAmount : Float;
     currentAmount : Float;
+    pixKey : Text;
     progressPhoto : ?Storage.ExternalBlob;
   };
 
@@ -399,6 +407,11 @@ actor {
   };
 
   public shared ({ caller }) func addTithe(titheId : Text, tithe : Tithe) : async () {
+    // Verify caller is an approved user
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add tithes");
+    };
+    // Verify ownership or admin
     if (not (onlyTitheOwnerOrAdmin(caller, tithe))) {
       Runtime.trap("Unauthorized: Only tithe owner or admins can add tithe");
     };
@@ -552,6 +565,10 @@ actor {
   };
 
   public shared ({ caller }) func addCantina(record : CantinaRecord) : async () {
+    // Verify caller is an approved user
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add cantina records");
+    };
     // Allow admin to add records for any member, or users to add their own
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin) or caller == record.memberId)) {
       Runtime.trap("Unauthorized: Only admins or the member can add cantina records");
@@ -577,9 +594,20 @@ actor {
     projects.add(project.name, project);
   };
 
-  public shared ({ caller }) func contributionProject(projectName : Text, contribution : Float) : async Float {
+  public shared ({ caller }) func deleteProject(projectName : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can update project contributions");
+      Runtime.trap("Unauthorized: Only admins can delete projects");
+    };
+    if (not projects.containsKey(projectName)) {
+      Runtime.trap("Project not found");
+    };
+    projects.remove(projectName);
+  };
+
+  public shared ({ caller }) func contributionProject(projectName : Text, contribution : Float) : async Float {
+    // Allow any approved user to contribute to projects
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can contribute to projects");
     };
     switch (projects.get(projectName)) {
       case (null) {

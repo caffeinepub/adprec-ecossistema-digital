@@ -10,15 +10,26 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AlertTriangle, Loader2, Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ExternalBlob } from "../backend";
 import type { Tithe } from "../backend";
-import { TitheStatus } from "../backend";
+import { TitheStatus, TitheType } from "../backend";
 import { useActor } from "../hooks/useActor";
 import { useAuth } from "../hooks/useAuth";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
+
+function titheTypeLabel(type: TitheType): string {
+  return type === TitheType.tithe ? "Dízimo" : "Oferta";
+}
 
 export function Financeiro() {
   const { actor } = useActor();
@@ -32,6 +43,7 @@ export function Financeiro() {
   const [form, setForm] = useState({
     amount: "",
     date: new Date().toISOString().split("T")[0],
+    titheType: TitheType.tithe,
   });
   const [warnOldTithe, setWarnOldTithe] = useState(false);
 
@@ -79,15 +91,24 @@ export function Financeiro() {
         amount: Number.parseFloat(form.amount),
         date: BigInt(new Date(form.date).getTime()),
         status: TitheStatus.pending,
+        titheType: form.titheType,
         receiptImage,
       });
-      toast.success("Dízimo registrado!");
-      setForm({ amount: "", date: new Date().toISOString().split("T")[0] });
+      toast.success(
+        `${titheTypeLabel(form.titheType)} registrado${
+          form.titheType === TitheType.tithe ? "" : "a"
+        }!`,
+      );
+      setForm({
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
+        titheType: TitheType.tithe,
+      });
       setReceiptFile(null);
       setOpen(false);
       load();
     } catch {
-      toast.error("Erro ao registrar dízimo.");
+      toast.error("Erro ao registrar.");
     } finally {
       setSaving(false);
     }
@@ -96,7 +117,7 @@ export function Financeiro() {
   const handleConfirm = async (id: string) => {
     if (!actor) return;
     await actor.confirmTithe(id);
-    toast.success("Dízimo confirmado!");
+    toast.success("Registro confirmado!");
     load();
   };
 
@@ -113,16 +134,33 @@ export function Financeiro() {
         <h1 className="text-2xl font-bold">Dízimos e Ofertas</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>
+            <Button data-ocid="financeiro.open_modal_button">
               <Plus className="h-4 w-4 mr-2" />
               Registrar
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md" data-ocid="financeiro.dialog">
             <DialogHeader>
-              <DialogTitle>Novo Dízimo</DialogTitle>
+              <DialogTitle>Novo Registro</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4">
+              <div className="grid gap-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={form.titheType}
+                  onValueChange={(v) =>
+                    setForm({ ...form, titheType: v as TitheType })
+                  }
+                >
+                  <SelectTrigger data-ocid="financeiro.select">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TitheType.tithe}>Dízimo</SelectItem>
+                    <SelectItem value={TitheType.offering}>Oferta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid gap-2">
                 <Label>Valor (R$)</Label>
                 <Input
@@ -130,6 +168,7 @@ export function Financeiro() {
                   value={form.amount}
                   onChange={(e) => setForm({ ...form, amount: e.target.value })}
                   placeholder="0,00"
+                  data-ocid="financeiro.input"
                 />
               </div>
               <div className="grid gap-2">
@@ -149,10 +188,18 @@ export function Financeiro() {
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  data-ocid="financeiro.cancel_button"
+                >
                   Cancelar
                 </Button>
-                <Button onClick={handleAdd} disabled={saving}>
+                <Button
+                  onClick={handleAdd}
+                  disabled={saving}
+                  data-ocid="financeiro.submit_button"
+                >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : null}
@@ -165,16 +212,22 @@ export function Financeiro() {
       </div>
 
       {warnOldTithe && !isAdmin && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-sm mb-4">
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-yellow-500/10 border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-sm mb-4"
+          data-ocid="financeiro.error_state"
+        >
           <AlertTriangle className="h-4 w-4 flex-shrink-0" />
           Sentimos falta da sua contribuição este mês. Sua fidelidade ajuda a
           obra de Deus a crescer!
         </div>
       )}
 
-      <div className="grid gap-3">
-        {tithes.map((t) => (
-          <Card key={`${t.memberId.toText()}-${t.date.toString()}`}>
+      <div className="grid gap-3" data-ocid="financeiro.list">
+        {tithes.map((t, idx) => (
+          <Card
+            key={`${t.memberId.toText()}-${t.date.toString()}`}
+            data-ocid={`financeiro.item.${idx + 1}`}
+          >
             <CardContent className="flex items-center gap-4 py-3">
               {t.receiptImage && (
                 <img
@@ -184,7 +237,17 @@ export function Financeiro() {
                 />
               )}
               <div className="flex-1">
-                <div className="font-semibold">R$ {t.amount.toFixed(2)}</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">
+                    R$ {t.amount.toFixed(2)}
+                  </span>
+                  <Badge
+                    variant="outline"
+                    className="text-xs px-1.5 py-0 border-border text-muted-foreground"
+                  >
+                    {titheTypeLabel(t.titheType)}
+                  </Badge>
+                </div>
                 <div className="text-sm text-muted-foreground">
                   {new Date(Number(t.date)).toLocaleDateString("pt-BR")}
                 </div>
@@ -205,6 +268,7 @@ export function Financeiro() {
                   <Button
                     size="sm"
                     variant="outline"
+                    data-ocid={`financeiro.secondary_button.${idx + 1}`}
                     onClick={() =>
                       handleConfirm(`${t.memberId.toText()}-${t.date}`)
                     }
@@ -217,7 +281,10 @@ export function Financeiro() {
           </Card>
         ))}
         {tithes.length === 0 && (
-          <p className="text-muted-foreground text-center py-8">
+          <p
+            className="text-muted-foreground text-center py-8"
+            data-ocid="financeiro.empty_state"
+          >
             Nenhum registro encontrado.
           </p>
         )}

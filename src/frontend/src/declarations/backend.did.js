@@ -42,12 +42,17 @@ export const TitheStatus = IDL.Variant({
   'pending' : IDL.Null,
   'confirmed' : IDL.Null,
 });
+export const TitheType = IDL.Variant({
+  'tithe' : IDL.Null,
+  'offering' : IDL.Null,
+});
 export const Tithe = IDL.Record({
   'status' : TitheStatus,
   'memberId' : IDL.Principal,
   'receiptImage' : IDL.Opt(ExternalBlob),
   'date' : IDL.Int,
   'amount' : IDL.Float64,
+  'titheType' : TitheType,
 });
 export const PrayerVisibility = IDL.Variant({
   'publicPrayer' : IDL.Null,
@@ -62,6 +67,7 @@ export const Prayer = IDL.Record({
 export const Project = IDL.Record({
   'name' : IDL.Text,
   'progressPhoto' : IDL.Opt(ExternalBlob),
+  'pixKey' : IDL.Text,
   'targetAmount' : IDL.Float64,
   'currentAmount' : IDL.Float64,
 });
@@ -146,6 +152,7 @@ export const idlService = IDL.Service({
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'confirmTithe' : IDL.Func([IDL.Text], [], []),
   'contributionProject' : IDL.Func([IDL.Text, IDL.Float64], [IDL.Float64], []),
+  'deleteProject' : IDL.Func([IDL.Text], [], []),
   'deleteTithe' : IDL.Func([IDL.Text], [], []),
   'editScale' : IDL.Func([Escala], [], []),
   'getAllEvents' : IDL.Func([], [IDL.Vec(Event)], ['query']),
@@ -190,11 +197,11 @@ export const idlService = IDL.Service({
   'isAdminAssigned' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
-  'selfInitializeAsFirstAdmin' : IDL.Func([], [IDL.Bool], []),
   'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
   'markRecordPaid' : IDL.Func([IDL.Text], [], []),
   'removeEvent' : IDL.Func([IDL.Text], [], []),
   'requestApproval' : IDL.Func([], [], []),
+  'selfInitializeAsFirstAdmin' : IDL.Func([], [IDL.Bool], []),
   'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
   'updateTithe' : IDL.Func([IDL.Text, IDL.Float64], [], []),
   'upsertMember' : IDL.Func([Member], [], []),
@@ -234,12 +241,14 @@ export const idlFactory = ({ IDL }) => {
     'pending' : IDL.Null,
     'confirmed' : IDL.Null,
   });
+  const TitheType = IDL.Variant({ 'tithe' : IDL.Null, 'offering' : IDL.Null });
   const Tithe = IDL.Record({
     'status' : TitheStatus,
     'memberId' : IDL.Principal,
     'receiptImage' : IDL.Opt(ExternalBlob),
     'date' : IDL.Int,
     'amount' : IDL.Float64,
+    'titheType' : TitheType,
   });
   const PrayerVisibility = IDL.Variant({
     'publicPrayer' : IDL.Null,
@@ -254,6 +263,7 @@ export const idlFactory = ({ IDL }) => {
   const Project = IDL.Record({
     'name' : IDL.Text,
     'progressPhoto' : IDL.Opt(ExternalBlob),
+    'pixKey' : IDL.Text,
     'targetAmount' : IDL.Float64,
     'currentAmount' : IDL.Float64,
   });
@@ -342,6 +352,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Float64],
         [],
       ),
+    'deleteProject' : IDL.Func([IDL.Text], [], []),
     'deleteTithe' : IDL.Func([IDL.Text], [], []),
     'editScale' : IDL.Func([Escala], [], []),
     'getAllEvents' : IDL.Func([], [IDL.Vec(Event)], ['query']),
@@ -390,11 +401,11 @@ export const idlFactory = ({ IDL }) => {
     'isAdminAssigned' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'isCallerApproved' : IDL.Func([], [IDL.Bool], ['query']),
-    'selfInitializeAsFirstAdmin' : IDL.Func([], [IDL.Bool], []),
     'listApprovals' : IDL.Func([], [IDL.Vec(UserApprovalInfo)], ['query']),
     'markRecordPaid' : IDL.Func([IDL.Text], [], []),
     'removeEvent' : IDL.Func([IDL.Text], [], []),
     'requestApproval' : IDL.Func([], [], []),
+    'selfInitializeAsFirstAdmin' : IDL.Func([], [IDL.Bool], []),
     'setApproval' : IDL.Func([IDL.Principal, ApprovalStatus], [], []),
     'updateTithe' : IDL.Func([IDL.Text, IDL.Float64], [], []),
     'upsertMember' : IDL.Func([Member], [], []),

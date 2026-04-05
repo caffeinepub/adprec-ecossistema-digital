@@ -65,6 +65,7 @@ export type PrayerVisibility = { 'publicPrayer' : null } |
 export interface Project {
   'name' : string,
   'progressPhoto' : [] | [ExternalBlob],
+  'pixKey' : string,
   'targetAmount' : number,
   'currentAmount' : number,
 }
@@ -74,9 +75,12 @@ export interface Tithe {
   'receiptImage' : [] | [ExternalBlob],
   'date' : bigint,
   'amount' : number,
+  'titheType' : TitheType,
 }
 export type TitheStatus = { 'pending' : null } |
   { 'confirmed' : null };
+export type TitheType = { 'tithe' : null } |
+  { 'offering' : null };
 export interface UserApprovalInfo {
   'status' : ApprovalStatus,
   'principal' : Principal,
@@ -122,6 +126,7 @@ export interface _SERVICE {
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'confirmTithe' : ActorMethod<[string], undefined>,
   'contributionProject' : ActorMethod<[string, number], number>,
+  'deleteProject' : ActorMethod<[string], undefined>,
   'deleteTithe' : ActorMethod<[string], undefined>,
   'editScale' : ActorMethod<[Escala], undefined>,
   'getAllEvents' : ActorMethod<[], Array<Event>>,
@@ -149,11 +154,11 @@ export interface _SERVICE {
   'isAdminAssigned' : ActorMethod<[], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'isCallerApproved' : ActorMethod<[], boolean>,
-  'selfInitializeAsFirstAdmin' : ActorMethod<[], boolean>,
   'listApprovals' : ActorMethod<[], Array<UserApprovalInfo>>,
   'markRecordPaid' : ActorMethod<[string], undefined>,
   'removeEvent' : ActorMethod<[string], undefined>,
   'requestApproval' : ActorMethod<[], undefined>,
+  'selfInitializeAsFirstAdmin' : ActorMethod<[], boolean>,
   'setApproval' : ActorMethod<[Principal, ApprovalStatus], undefined>,
   'updateTithe' : ActorMethod<[string, number], undefined>,
   'upsertMember' : ActorMethod<[Member], undefined>,
